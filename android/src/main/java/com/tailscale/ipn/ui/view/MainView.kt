@@ -187,22 +187,28 @@ fun MainView(
                   }
                 },
                 trailingContent = {
-                  Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
-                    when (user) {
-                      null -> SettingsButton { navigation.onNavigateToSettings() }
-                      else ->
-                          Box(
-                              contentAlignment = Alignment.Center,
-                              modifier =
-                                  Modifier.size(42.dp).clip(CircleShape).clickable {
-                                    navigation.onNavigateToSettings()
-                                  }) {
-                                Avatar(profile = user, size = 36) {
-                                  navigation.onNavigateToSettings()
-                                }
-                              }
-                    }
-                  }
+                  Box(
+                      modifier =
+                          Modifier.weight(1f)
+                              .focusable()
+                              .clickable { navigation.onNavigateToSettings() }
+                              .padding(8.dp), 
+                      contentAlignment = Alignment.CenterEnd) {
+                        when (user) {
+                          null -> SettingsButton { navigation.onNavigateToSettings() }
+                          else ->
+                              Box(
+                                  contentAlignment = Alignment.Center,
+                                  modifier =
+                                      Modifier.size(42.dp).clip(CircleShape).focusable().clickable {
+                                        navigation.onNavigateToSettings()
+                                      }) {
+                                    Avatar(profile = user, size = 36) {
+                                      navigation.onNavigateToSettings()
+                                    }
+                                  }
+                        }
+                      }
                 })
 
             when (state) {
@@ -232,6 +238,9 @@ fun MainView(
                 ConnectView(
                     state,
                     isPrepared,
+                    // If Tailscale is stopping, don't automatically restart; wait for user to take
+                    // action (eg, if the user connected to another VPN).
+                    state != Ipn.State.Stopping,
                     user,
                     { viewModel.toggleVpn() },
                     { viewModel.login() },
@@ -407,6 +416,7 @@ fun StartingView() {
 fun ConnectView(
     state: Ipn.State,
     isPrepared: Boolean,
+    shouldStartAutomatically: Boolean,
     user: IpnLocal.LoginProfile?,
     connectAction: () -> Unit,
     loginAction: () -> Unit,
@@ -415,7 +425,7 @@ fun ConnectView(
     showVPNPermissionLauncherIfUnauthorized: () -> Unit
 ) {
   LaunchedEffect(isPrepared) {
-    if (!isPrepared) {
+    if (!isPrepared && shouldStartAutomatically) {
       showVPNPermissionLauncherIfUnauthorized()
     }
   }

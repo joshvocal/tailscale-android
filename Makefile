@@ -8,7 +8,8 @@
 # The docker image to use for the build environment.  Changing this
 # will force a rebuild of the docker image.  If there is an existing image
 # with this name, it will be used.
-DOCKER_IMAGE=tailscale-android-build-amd64
+DOCKER_IMAGE=tailscale-android-build-amd64-go1.23
+export TS_USE_TOOLCHAIN=1
 
 DEBUG_APK=tailscale-debug.apk
 RELEASE_AAB=tailscale-release.aab
@@ -179,6 +180,10 @@ androidpath:
 	@echo "export ANDROID_SDK_ROOT=$(ANDROID_SDK_ROOT)"
 	@echo 'export PATH=$(ANDROID_HOME)/cmdline-tools/latest/bin:$(ANDROID_HOME)/platform-tools:$$PATH'
 
+.PHONY: tag_release
+tag_release: ## Tag the current commit with the current version
+	git tag -a "$(VERSION_LONG)" -m "OSS and Version updated to ${VERSION_LONG}"
+
 
 .PHONY: bumposs ## Bump to the latest oss and update teh versions.
 bumposs: update-oss update-version
@@ -197,7 +202,7 @@ update-version: ## Update the version in build.gradle
 update-oss: ## Update the tailscale.com go module and update the version in build.gradle
 	GOPROXY=direct go get tailscale.com@main
 	go run tailscale.com/cmd/printdep --go > go.toolchain.rev
-	go mod tidy -compat=1.22
+	go mod tidy -compat=1.23
 
 # Get the commandline tools package, this provides (among other things) the sdkmanager binary.
 $(ANDROID_HOME)/cmdline-tools/latest/bin/sdkmanager:
@@ -261,7 +266,7 @@ docker-all: docker-build-image docker-run-build $(DOCKER_IMAGE)
 .PHONY: docker-shell
 docker-shell: ## Builds a docker image with the android build env and opens a shell
 	docker build  -f docker/DockerFile.amd64-shell -t tailscale-android-shell-amd64 .
-	docker run -v --rm $(CURDIR):/build/tailscale-android -it tailscale-android-shell-amd64
+	docker run --rm -v $(CURDIR):/build/tailscale-android -it tailscale-android-shell-amd64
 
 .PHONY: docker-remove-shell-image
 docker-remove-shell-image: ## Removes all docker shell image
